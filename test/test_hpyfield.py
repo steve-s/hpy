@@ -97,6 +97,7 @@ class TestHPyField(HPyTest):
         if not self.supports_refcounts():
             import pytest
             pytest.skip("CPython only")
+        import sys
         # Test that we correctly call PyObject_GC_Track on CPython. The
         # easiest way is to check whether the object is in
         # gc.get_objects().
@@ -132,6 +133,7 @@ class TestHPyField(HPyTest):
         assert not gc.is_tracked(p)
 
     def test_tp_traverse(self):
+        import sys
         import gc
         mod = self.make_module("""
             @DEFINE_PairObject
@@ -239,6 +241,7 @@ class TestHPyField(HPyTest):
             assert sys.getrefcount(a) == a_refcnt
 
     def test_automatic_tp_dealloc(self):
+        import sys
         if not self.supports_refcounts():
             import pytest
             pytest.skip("CPython only")
@@ -265,8 +268,8 @@ class TestHPyField(HPyTest):
         if not self.supports_refcounts():
             import pytest
             pytest.skip("CPython only")
-
         import sys
+
         import gc
         mod = self.make_module("""
             @DEFINE_PairObject

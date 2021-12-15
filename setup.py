@@ -1,5 +1,6 @@
 import textwrap
 import sys
+import os
 import os.path
 from setuptools import setup, Extension
 
@@ -51,6 +52,9 @@ if 'HPY_DEBUG' in os.environ:
 else:
     EXTRA_COMPILE_ARGS = []
 
+if os.name == "posix" and not '_HPY_DEBUG_FORCE_DEFAULT_MEM_PROTECT' in os.environ:
+    EXTRA_COMPILE_ARGS += ['-D_HPY_DEBUG_MEM_PROTECT_USEMMAP']
+
 
 def get_scm_config():
     """
@@ -92,6 +96,7 @@ EXT_MODULES = [
                'hpy/universal/src/ctx_meth.c',
                'hpy/universal/src/ctx_misc.c',
                'hpy/devel/src/runtime/argparse.c',
+               'hpy/devel/src/runtime/buildvalue.c',
                'hpy/devel/src/runtime/helpers.c',
                'hpy/devel/src/runtime/ctx_bytes.c',
                'hpy/devel/src/runtime/ctx_call.c',
@@ -107,6 +112,7 @@ EXT_MODULES = [
                'hpy/debug/src/debug_ctx_cpython.c',
                'hpy/debug/src/debug_handles.c',
                'hpy/debug/src/dhqueue.c',
+               'hpy/debug/src/memprotect.c',
                'hpy/debug/src/_debugmod.c',
                'hpy/debug/src/autogen_debug_wrappers.c',
               ],

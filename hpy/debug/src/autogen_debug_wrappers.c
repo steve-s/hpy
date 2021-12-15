@@ -312,9 +312,14 @@ void debug_ctx_Err_SetObject(HPyContext *dctx, DHPy h_type, DHPy h_value)
     HPyErr_SetObject(get_info(dctx)->uctx, DHPy_unwrap(dctx, h_type), DHPy_unwrap(dctx, h_value));
 }
 
-DHPy debug_ctx_Err_SetFromErrno(HPyContext *dctx, DHPy h_type)
+DHPy debug_ctx_Err_SetFromErrnoWithFilename(HPyContext *dctx, DHPy h_type, const char *filename_fsencoded)
 {
-    return DHPy_open(dctx, HPyErr_SetFromErrno(get_info(dctx)->uctx, DHPy_unwrap(dctx, h_type)));
+    return DHPy_open(dctx, HPyErr_SetFromErrnoWithFilename(get_info(dctx)->uctx, DHPy_unwrap(dctx, h_type), filename_fsencoded));
+}
+
+DHPy debug_ctx_Err_SetFromErrnoWithFilenameObjects(HPyContext *dctx, DHPy h_type, DHPy filename1, DHPy filename2)
+{
+    return DHPy_open(dctx, HPyErr_SetFromErrnoWithFilenameObjects(get_info(dctx)->uctx, DHPy_unwrap(dctx, h_type), DHPy_unwrap(dctx, filename1), DHPy_unwrap(dctx, filename2)));
 }
 
 int debug_ctx_Err_Occurred(HPyContext *dctx)
@@ -525,11 +530,6 @@ int debug_ctx_Unicode_Check(HPyContext *dctx, DHPy h)
 DHPy debug_ctx_Unicode_AsUTF8String(HPyContext *dctx, DHPy h)
 {
     return DHPy_open(dctx, HPyUnicode_AsUTF8String(get_info(dctx)->uctx, DHPy_unwrap(dctx, h)));
-}
-
-const char *debug_ctx_Unicode_AsUTF8AndSize(HPyContext *dctx, DHPy h, HPy_ssize_t *size)
-{
-    return HPyUnicode_AsUTF8AndSize(get_info(dctx)->uctx, DHPy_unwrap(dctx, h), size);
 }
 
 DHPy debug_ctx_Unicode_FromWideChar(HPyContext *dctx, const wchar_t *w, HPy_ssize_t size)

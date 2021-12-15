@@ -100,6 +100,7 @@ typedef struct { intptr_t _i; } HPyTracker;
 #define HPy_IsNull(h) ((h)._i == 0)
 
 #define HPyField_NULL ((HPyField){0})
+#define HPyField_IsNull(f) ((f)._i == 0)
 
 /* Convenience functions to cast between HPy and void*.  We need to decide
    whether these are part of the official API or not, and maybe introduce a
@@ -135,6 +136,7 @@ typedef struct _HPyContext_s HPyContext;
 #include "hpy/hpytype.h"
 #include "hpy/hpymodule.h"
 #include "hpy/runtime/argparse.h"
+#include "hpy/runtime/buildvalue.h"
 #include "hpy/runtime/helpers.h"
 
 #ifdef HPY_UNIVERSAL_ABI
@@ -148,5 +150,7 @@ typedef struct _HPyContext_s HPyContext;
 #   include "hpy/cpython/misc.h"
 #   include "hpy/cpython/autogen_api_impl.h"
 #endif
+
+#include "hpy/inline_helpers.h"
 
 #endif /* HPy_H */
