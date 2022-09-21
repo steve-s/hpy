@@ -20,9 +20,9 @@
 #  error "Cannot build hpy.universal on top of GraalPython. GraalPython comes with its own version of it"
 #endif
 
-typedef HPy (*InitFuncPtr)(HPyContext *ctx);
+typedef HPy (*CreateFuncPtr)(HPyContext *ctx, HPy spec, HPyModuleDef *def);
+typedef int (*ExecFuncPtr)(HPyContext *ctx, HPy mod);
 
-static const char *prefix = "HPyInit";
 
 static HPyContext * get_context(int debug)
 {
@@ -84,10 +84,6 @@ static PyObject *do_load(PyObject *name_unicode, PyObject *path, int debug)
     if (name == NULL) {
         goto error;
     }
-    const char *shortname = PyBytes_AS_STRING(name);
-    char init_name[258];
-    PyOS_snprintf(init_name, sizeof(init_name), "%.20s_%.200s",
-            prefix, shortname);
 
     pathbytes = PyUnicode_EncodeFSDefault(path);
     if (pathbytes == NULL)
@@ -105,7 +101,46 @@ static PyObject *do_load(PyObject *name_unicode, PyObject *path, int debug)
         goto error;
     }
 
-    void *initfn = dlsym(mylib, init_name);
+    const char *shortname = PyBytes_AS_STRING(name);
+    char def_name[258];
+    PyOS_snprintf(def_name, sizeof(def_name), "%.20s_%.200s",
+                  "HPyModDef", shortname);
+    HPyModuleDef *mod_def = (HPyModuleDef*) dlsym(mylib, def_name);
+    if (mod_def == NULL)  {
+        const char *error = dlerror();
+        if (error == NULL)
+            error = "no error message provided by the system";
+        PyErr_Format(PyExc_RuntimeError,
+                     "Error during loading of the HPy extension specification at "
+                     "path '%s' while trying to find symbol '%s'. Did you use"
+                     "the HPy_MODINIT macro to register your module? Error "
+                     "message from dlsym/WinAPI: %s", soname, def_name, error);
+        goto error;
+    }
+
+    HPyContext *ctx = get_context(debug);
+    if (ctx == NULL)
+        goto error;
+    
+    char create_name[258];
+    PyOS_snprintf(create_name, sizeof(create_name), "%.20s_%.200s",
+                  "HPyCreate", shortname);
+    void *createfn = dlsym(mylib, create_name);
+    HPy mod;
+    if (createfn == NULL) {
+        // default creation:
+        mod = HPyModule_Create(ctx, mod_def);
+    } else {
+        // ISSUE: we do not have the spec here
+        mod = ((CreateFuncPtr) createfn)(ctx, ctx->h_None, mod_def);
+    }
+    if (HPy_IsNull(mod))
+        goto error;
+    
+    char exec_name[258];
+    PyOS_snprintf(exec_name, sizeof(exec_name), "%.20s_%.200s",
+                  "HPyExec", shortname);
+    void *initfn = dlsym(mylib, exec_name);
     if (initfn == NULL) {
         const char *error = dlerror();
         if (error == NULL)
@@ -114,18 +149,17 @@ static PyObject *do_load(PyObject *name_unicode, PyObject *path, int debug)
                      "Error during loading of the HPy extension module at "
                      "path '%s' while trying to find symbol '%s'. Did you use"
                      "the HPy_MODINIT macro to register your module? Error "
-                     "message from dlsym/WinAPI: %s", soname, init_name, error);
+                     "message from dlsym/WinAPI: %s", soname, exec_name, error);
+        goto error;
+    }
+    
+    if (((ExecFuncPtr)initfn)(ctx, mod) != 0) {
+        // We assume the function set some exception (TODO: check that and set some error if not)
         goto error;
     }
 
-    HPyContext *ctx = get_context(debug);
-    if (ctx == NULL)
-        goto error;
-    HPy h_mod = ((InitFuncPtr)initfn)(ctx);
-    if (HPy_IsNull(h_mod))
-        goto error;
-    PyObject *py_mod = HPy_AsPyObject(ctx, h_mod);
-    HPy_Close(ctx, h_mod);
+    PyObject *py_mod = HPy_AsPyObject(ctx, mod);
+    HPy_Close(ctx, mod);
 
     Py_XDECREF(name);
     Py_XDECREF(pathbytes);
